@@ -3,7 +3,7 @@ package auth
 import "testing"
 
 func TestLoginIPLimiterAllowsTwentyThenBlocks(t *testing.T) {
-	l := &LoginIPLimiter{entries: make(map[string]*ipAttempt)}
+	l := NewLoginIPLimiter()
 	ip := "203.0.113.10"
 	for i := 0; i < loginIPLimit; i++ {
 		if !l.Allow(ip) {
