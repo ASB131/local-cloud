@@ -1,0 +1,11 @@
+DROP TABLE IF EXISTS thumbnail_jobs;
+DROP TABLE IF EXISTS upload_sessions;
+DROP TABLE IF EXISTS refresh_tokens;
+DROP TABLE IF EXISTS system_logs;
+DROP TABLE IF EXISTS invite_codes;
+DROP TABLE IF EXISTS favorites;
+DROP TABLE IF EXISTS file_versions;
+DROP TABLE IF EXISTS files;
+DROP TABLE IF EXISTS folders;
+DROP TABLE IF EXISTS settings;
+DROP TABLE IF EXISTS users;

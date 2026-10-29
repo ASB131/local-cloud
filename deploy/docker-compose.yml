@@ -1,0 +1,81 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - localcloud_internal
+
+  localcloud-api:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      LOCAL_CLOUD_HTTP_ADDR: ${LOCAL_CLOUD_HTTP_ADDR:-:${LOCAL_CLOUD_PORT:-8090}}
+      LOCAL_CLOUD_DATA_DIR: ${LOCAL_CLOUD_DATA_DIR:-/data}
+      LOCAL_CLOUD_JWT_SECRET: ${LOCAL_CLOUD_JWT_SECRET}
+      LOCAL_CLOUD_ADMIN_USERNAME: ${LOCAL_CLOUD_ADMIN_USERNAME:-}
+      LOCAL_CLOUD_ADMIN_PASSWORD: ${LOCAL_CLOUD_ADMIN_PASSWORD:-}
+      LOCAL_CLOUD_ADMIN_QUOTA_BYTES: ${LOCAL_CLOUD_ADMIN_QUOTA_BYTES:-107374182400}
+      LOCAL_CLOUD_LOG_LEVEL: ${LOCAL_CLOUD_LOG_LEVEL:-info}
+      LOCAL_CLOUD_TLS_CERT: ${LOCAL_CLOUD_TLS_CERT:-}
+      LOCAL_CLOUD_TLS_KEY: ${LOCAL_CLOUD_TLS_KEY:-}
+      LOCAL_CLOUD_ONLYOFFICE_PUBLIC_URL: ${LOCAL_CLOUD_ONLYOFFICE_PUBLIC_URL:-}
+      LOCAL_CLOUD_INTERNAL_BASE_URL: ${LOCAL_CLOUD_INTERNAL_BASE_URL:-http://localcloud-api:8090}
+    # Default publishes on all host interfaces. For stricter LAN binding, replace with your LAN IP, e.g.
+    # "192.168.1.50:${LOCAL_CLOUD_HOST_PORT:-8090}:${LOCAL_CLOUD_PORT:-8090}"
+    ports:
+      - "${LOCAL_CLOUD_HOST_PORT:-8090}:${LOCAL_CLOUD_PORT:-8090}"
+    volumes:
+      - localcloud_data:/data
+      - ${LOCAL_CLOUD_TLS_CERT_DIR:-./tls}:/tls:ro
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+    networks:
+      - localcloud_internal
+
+  onlyoffice-documentserver:
+    profiles: ["onlyoffice"]
+    image: onlyoffice/documentserver:8.2
+    restart: unless-stopped
+    environment:
+      JWT_ENABLED: "false"
+    ports:
+      - "${ONLYOFFICE_HOST_PORT:-8082}:80"
+    networks:
+      - localcloud_internal
+
+  watchtower:
+    image: containrrr/watchtower:1.7.1
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      WATCHTOWER_POLL_INTERVAL: 86400
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_LABEL_ENABLE: "true"
+    networks:
+      - localcloud_internal
+
+networks:
+  localcloud_internal:
+
+volumes:
+  pg_data:
+  localcloud_data:
